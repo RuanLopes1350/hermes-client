@@ -50,27 +50,31 @@ Quando sua API Key for expirar, o Hermes chamará o seu servidor. Com este SDK, 
 
 ```typescript
 import express from 'express';
-import { parseWebhookPayload, EnvAdapter } from 'hermes-client';
+import { HermesClient, EnvAdapter, parseWebhookPayload } from '@ruanlopes1350/hermes-client';
 
 const app = express();
-const adapter = new EnvAdapter('.env', 'HERMES_API_KEY');
+
+const hermes = new HermesClient({
+  baseUrl: 'https://seu-hermes-api.com',
+  storageAdapter: new EnvAdapter('.env', 'HERMES_API_KEY')
+});
 
 // IMPORTANTE: Para o Webhook criptografado funcionar, você deve pegar o body no formato bruto (RAW)
-app.post('/webhooks/hermes', express.raw({ type: 'application/json' }), (req, res) => {
+app.post('/webhooks/hermes', express.raw({ type: 'application/json' }), async (req, res) => {
   const signature = req.headers['x-hermes-signature'];
   const webhookSecret = process.env.HERMES_WEBHOOK_SECRET;
 
   // Valida e extrai o payload com segurança (validação HMAC SHA-256 embutida)
-  const payload = parseWebhookPayload(req.body.toString(), signature as string, webhookSecret);
+  const payload = parseWebhookPayload(req.body.toString(), signature as string, webhookSecret as string);
 
   if (!payload) {
     return res.status(401).send('Assinatura inválida! Possível tentativa de fraude.');
   }
 
-  // Se for válido, atualize a chave usando o Adapter!
-  console.log(`Nova chave recebida para o serviço ${payload.serviceId}`);
-  adapter.setApiKey(payload.newApiKey);
+  // Com a versão 1.1.0, o próprio cliente atualiza a chave para você!
+  await hermes.processWebhookPayload(payload);
 
+  console.log(`Nova chave aplicada com sucesso para o serviço ${payload.serviceId}`);
   res.status(200).send('Chave rotacionada com sucesso!');
 });
 ```

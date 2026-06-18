@@ -1,7 +1,7 @@
 {
   "name": "@ruanlopes1350/hermes-client",
-  "version": "1.0.0",
-  "description": "SDK oficial para o Hermes - Gateway de E-mails Transacionais com suporte a rotação de chaves",
+  "version": "1.1.0",
+  "description": "SDK oficial para comunicação com o microsserviço de e-mails Hermes.",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",

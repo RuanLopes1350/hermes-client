@@ -42,4 +42,20 @@ export class HermesClient {
 
 		return response.json();
 	}
+
+	// Permite atualizar a chave diretamente em tempo de execução
+	async updateApiKey(newKey: string) {
+		if (this.config.storageAdapter) {
+			await this.config.storageAdapter.setApiKey(newKey);
+		}
+	}
+
+	// Facilita o processamento de um webhook recebido
+	async processWebhookPayload(payload: any) {
+		if (payload && payload.newApiKey) {
+			await this.updateApiKey(payload.newApiKey);
+			return true;
+		}
+		return false;
+	}
 }
