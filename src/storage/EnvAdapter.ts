@@ -15,10 +15,24 @@ export class EnvAdapter implements StorageAdapter {
 	getApiKey(): string | null {
 		if (this.currentKey) return this.currentKey;
 
-		// Fallback: lê do process.env caso já exista na memória global da aplicação
+		// 1. Fallback: lê do process.env caso a aplicação (NextJS, etc) já tenha carregado
 		if (process.env[this.envKeyName]) {
 			this.currentKey = process.env[this.envKeyName] as string;
 			return this.currentKey;
+		}
+
+		// 2. Fallback: Lê diretamente do arquivo .env físico, se existir
+		if (fs.existsSync(this.envPath)) {
+			const envContent = fs.readFileSync(this.envPath, 'utf-8');
+			// Permite chaves com espaços como `HERMES_API_KEY = xyz`
+			const regex = new RegExp(`^\\s*${this.envKeyName}\\s*=\\s*(.*)$`, 'm');
+			const match = envContent.match(regex);
+			if (match && match[1]) {
+				const val = match[1].trim();
+				this.currentKey = val;
+				process.env[this.envKeyName] = val; // alimenta na memória
+				return val;
+			}
 		}
 
 		return null;
@@ -33,7 +47,7 @@ export class EnvAdapter implements StorageAdapter {
 			envContent = fs.readFileSync(this.envPath, 'utf-8');
 		}
 
-		const regex = new RegExp(`^${this.envKeyName}=.*$`, 'm');
+		const regex = new RegExp(`^\\s*${this.envKeyName}\\s*=.*$`, 'm');
 		if (regex.test(envContent)) {
 			envContent = envContent.replace(regex, `${this.envKeyName}=${newKey}`);
 		} else {
