@@ -5,7 +5,7 @@ SDK oficial em Node.js/TypeScript para integrar com o **Hermes - Gateway de E-ma
 ## 📦 Instalação
 
 ```bash
-npm install hermes-client
+npm install @ruanlopes1350/hermes-client
 ```
 
 ## 🚀 Como Funciona
