@@ -1,6 +1,6 @@
 {
   "name": "@ruanlopes1350/hermes-client",
-  "version": "1.1.2",
+  "version": "1.2.0",
   "description": "SDK oficial para comunicação com o microsserviço de e-mails Hermes.",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
