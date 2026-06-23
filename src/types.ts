@@ -12,7 +12,16 @@ export interface StorageAdapter {
 export interface SendEmailPayload {
 	recipient_to: string;
 	subject: string;
+	
+	/**
+	 * @deprecated Use `template_id` instead.
+	 */
 	service_template_id?: string;
+	
+	template_id?: string;
+	body?: string;
+	credential_id?: string;
+	scheduled_at?: string;
 	variables?: Record<string, any>;
 }
 

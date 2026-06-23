@@ -1,10 +1,27 @@
 {
   "name": "@ruanlopes1350/hermes-client",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "SDK oficial para comunicação com o microsserviço de e-mails Hermes.",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./express": {
+      "types": "./dist/express.d.ts",
+      "import": "./dist/express.mjs",
+      "require": "./dist/express.js"
+    },
+    "./next": {
+      "types": "./dist/next.d.ts",
+      "import": "./dist/next.mjs",
+      "require": "./dist/next.js"
+    }
+  },
   "files": [
     "dist"
   ],

@@ -1,6 +1,6 @@
 # Hermes Client SDK
 
-SDK oficial em Node.js/TypeScript para integrar com o **Hermes - Gateway de E-mails Transacionais**. Este SDK simplifica o envio de e-mails e a **gestão automática de rotação de API Keys** usando Webhooks.
+SDK oficial em Node.js/TypeScript para integrar com o **Hermes - Gateway de E-mails Transacionais**. Este SDK fornece uma interface moderna e encadeada (fluida) para o envio de e-mails, além de gerenciar **automaticamente a rotação de API Keys** em tempo real usando Webhooks.
 
 ## 📦 Instalação
 
@@ -8,84 +8,134 @@ SDK oficial em Node.js/TypeScript para integrar com o **Hermes - Gateway de E-ma
 npm install @ruanlopes1350/hermes-client
 ```
 
-## 🚀 Como Funciona
-
-O Hermes possui um recurso nativo de **Rotação de Chaves** onde envia um Webhook para a sua aplicação pouco antes de uma chave expirar. Este SDK abstrai a complexidade desse fluxo: ele recebe o Webhook validando a criptografia e já armazena a nova chave no seu ambiente.
-
 ---
 
-## 📖 Como Usar
+## 🚀 Como Usar
 
-### 1. Inicializando o Cliente de Envio
-
-Você pode configurar o Hermes para buscar a chave na sua memória atual ou ler dinamicamente de arquivos `.env`.
-
-```typescript
-import { HermesClient, EnvAdapter } from 'hermes-client';
-
-const hermes = new HermesClient({
-  baseUrl: 'https://seu-hermes-api.com', // URL do seu servidor Hermes
-  
-  // Opcional: Se quiser que ele se atualize automaticamente num arquivo .env local:
-  storageAdapter: new EnvAdapter('.env', 'HERMES_API_KEY') 
-});
-
-// Envio de E-mail Transacional
-await hermes.sendEmail({
-  recipient_to: 'usuario@exemplo.com',
-  subject: 'Bem-vindo ao Sistema',
-  service_template_id: 'tmpl_xxxxxxxx',
-  variables: {
-    nome: 'John Doe',
-    link: 'https://app.com/ativar'
-  }
-});
-```
-
-### 2. Tratando o Webhook de Rotação de Chave
-
-Quando sua API Key for expirar, o Hermes chamará o seu servidor. Com este SDK, é seguro e fácil tratar esse payload.
-
-**Exemplo no Express.js:**
+### 1. Inicialização Básica
+O SDK precisa de um endereço do seu servidor Hermes e de uma estratégia de armazenamento para a chave (Storage Adapter).
 
 ```typescript
-import express from 'express';
-import { HermesClient, EnvAdapter, parseWebhookPayload } from '@ruanlopes1350/hermes-client';
-
-const app = express();
+import { HermesClient, MemoryAdapter } from '@ruanlopes1350/hermes-client';
 
 const hermes = new HermesClient({
   baseUrl: 'https://seu-hermes-api.com',
-  storageAdapter: new EnvAdapter('.env', 'HERMES_API_KEY')
-});
-
-// IMPORTANTE: Para o Webhook criptografado funcionar, você deve pegar o body no formato bruto (RAW)
-app.post('/webhooks/hermes', express.raw({ type: 'application/json' }), async (req, res) => {
-  const signature = req.headers['x-hermes-signature'];
-  const webhookSecret = process.env.HERMES_WEBHOOK_SECRET;
-
-  // Valida e extrai o payload com segurança (validação HMAC SHA-256 embutida)
-  const payload = parseWebhookPayload(req.body.toString(), signature as string, webhookSecret as string);
-
-  if (!payload) {
-    return res.status(401).send('Assinatura inválida! Possível tentativa de fraude.');
-  }
-
-  // Com a versão 1.1.0, o próprio cliente atualiza a chave para você!
-  await hermes.processWebhookPayload(payload);
-
-  console.log(`Nova chave aplicada com sucesso para o serviço ${payload.serviceId}`);
-  res.status(200).send('Chave rotacionada com sucesso!');
+  // O MemoryAdapter é usado por padrão, mas você pode usar o seu próprio (ex: RedisAdapter)
+  storageAdapter: new MemoryAdapter('sk_live_sua_chave_inicial_aqui')
 });
 ```
 
-## 🛠️ Adapters Disponíveis
+### 2. Enviando E-mails (Padrão Fluido - Recomendado)
+A nova versão do SDK introduz o *Email Builder*, que oferece autocomplete avançado e encadeamento de métodos para uma experiência de desenvolvimento (DX) impecável.
 
-* **`MemoryAdapter`**: Guarda a chave na RAM da instância que está rodando. Se o servidor for reiniciado, a chave é perdida (usada principalmente para testes).
-* **`EnvAdapter`**: Lê e escreve a chave dinamicamente em um arquivo `.env` físico. Ideal para rodar em *Bare Metal* ou servidores VPS tradicionais sem que você precise abrir o `.env` e alterar na mão.
+```typescript
+// Exemplo com Template do Hermes
+await hermes.email()
+  .to('cliente@empresa.com')
+  .subject('Bem-vindo ao Sistema!')
+  .useTemplate('1234-uuid-do-template', { nome: 'João da Silva' })
+  .send();
 
-> Você pode criar o seu próprio adapter (ex: AWS Secrets Manager, Vercel ou Redis) implementando a interface \`StorageAdapter\`!
+// Exemplo com envio de HTML direto
+await hermes.email()
+  .to('alerta@empresa.com')
+  .subject('Alerta de Segurança')
+  .body('<h1>Aviso</h1><p>Houve uma tentativa de login.</p>')
+  .send();
+```
+
+*(Nota: O método legado `hermes.sendEmail(payload)` ainda é suportado para garantir retrocompatibilidade com aplicações já integradas).*
+
+---
+
+## 🔄 Rotação Automática de Chaves (Webhooks)
+
+O Hermes enviará um Webhook contendo uma nova API Key sempre que a chave atual estiver prestes a expirar. O SDK oferece **middlewares plug-and-play** para tratar esse webhook e validar criptografia HMAC automaticamente, sem dor de cabeça.
+
+### Opção A: Usando com Express.js
+Basta importar o handler oficial para Express.
+
+```typescript
+import express from 'express';
+import { expressWebhookHandler } from '@ruanlopes1350/hermes-client/express';
+
+const app = express();
+
+// IMPORTANTE: O Express precisa ler o body cru (raw) para a assinatura HMAC funcionar.
+app.post(
+  '/webhook/hermes', 
+  express.raw({ type: 'application/json' }), 
+  expressWebhookHandler(hermes, process.env.HERMES_WEBHOOK_SECRET)
+);
+```
+
+### Opção B: Usando com Next.js (App Router)
+Crie um arquivo em `app/api/webhook/hermes/route.ts`:
+
+```typescript
+import { nextWebhookHandler } from '@ruanlopes1350/hermes-client/next';
+import { hermes } from '@/lib/hermes'; // A instância que você criou no passo 1
+
+export const POST = nextWebhookHandler(hermes, process.env.HERMES_WEBHOOK_SECRET!);
+```
+
+---
+
+## 📡 Eventos (Ciclo de Vida)
+
+O `HermesClient` é um emissor de eventos (*Lightweight Event Emitter* 100% compatível com Edge Runtimes). Você pode escutar eventos cruciais da aplicação, como a rotação de chaves ou erros do webhook.
+
+```typescript
+hermes.on('keyRotated', (newKey, oldKey) => {
+  console.log('✅ A chave foi rotacionada magicamente pelo webhook!');
+});
+
+hermes.on('error', (err) => {
+  console.error('❌ Ocorreu um erro no cliente Hermes:', err);
+});
+```
+
+---
+
+## 🛠️ Storage Adapters (Armazenando a Chave)
+
+Quando o webhook chega e a chave muda, onde o SDK guarda essa nova chave?
+Para isso servem os *Adapters*:
+
+* **`MemoryAdapter` (Padrão)**: Guarda a chave na RAM da instância que está rodando. Se o servidor for reiniciado e houver Load Balancing, outras instâncias não saberão da chave nova. Ideal para testes rápidos.
+* **`EnvAdapter`**: Lê e escreve a chave dinamicamente em um arquivo `.env` físico. Ideal para rodar em *Bare Metal* ou servidores VPS tradicionais sem que você precise abrir o `.env` e alterar na mão!
+
+```typescript
+import { HermesClient, EnvAdapter } from '@ruanlopes1350/hermes-client';
+
+const hermes = new HermesClient({
+  baseUrl: 'https://seu-hermes-api.com',
+  // Ele vai procurar a variável HERMES_API_KEY no arquivo .env
+  storageAdapter: new EnvAdapter('.env', 'HERMES_API_KEY') 
+});
+```
+
+* **Crie o seu Próprio**: Para aplicações Serverless/Vercel ou Load-Balancers, é vital compartilhar a chave entre todas as instâncias. Você pode criar facilmente um adaptador usando Redis.
+
+```typescript
+import { StorageAdapter, HermesClient } from '@ruanlopes1350/hermes-client';
+import redis from './redis-client';
+
+export class RedisAdapter implements StorageAdapter {
+  async getApiKey() {
+    return await redis.get('hermes_api_key');
+  }
+
+  async setApiKey(key: string) {
+    await redis.set('hermes_api_key', key);
+  }
+}
+
+// Inicialize o Hermes com seu adaptador:
+const hermes = new HermesClient({ baseUrl: '...', storageAdapter: new RedisAdapter() });
+```
+
+---
 
 ## 📄 Licença
-
 ISC
