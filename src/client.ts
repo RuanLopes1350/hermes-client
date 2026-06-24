@@ -25,7 +25,9 @@ export class HermesClient extends LiteEventEmitter {
 		const apiKey = await this.config.storageAdapter?.getApiKey();
 
 		if (!apiKey) {
-			const err = new Error('HermesClient: API Key is missing. Please provide it via StorageAdapter or initialApiKey.');
+			const err = new Error(
+				'HermesClient: API Key is missing. Please provide it via StorageAdapter or initialApiKey.',
+			);
 			this.emit('error', err);
 			throw err;
 		}
