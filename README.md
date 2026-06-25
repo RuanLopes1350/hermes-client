@@ -69,6 +69,30 @@ await hermes.sendBulkEmails([
 ]);
 ```
 
+### 4. Tratamento de Erros e Retentativas Automáticas
+O Hermes SDK possui suporte inteligente para retry automático (Backoff Exponencial) e expõe classes de erros tipadas. Dessa forma, você pode diferenciar os cenários e aplicar lógicas exclusivas.
+
+```typescript
+import { HermesRateLimitError, HermesAuthError, HermesNetworkError } from '@ruanlopes1350/hermes-client';
+
+try {
+  await hermes.email()
+    .to('user@example.com')
+    .subject('Recuperação de Senha')
+    .useTemplate('recovery-template', { link: '...' })
+    .send();
+} catch (err) {
+  if (err instanceof HermesRateLimitError) {
+    console.warn(`Rate limit atingido. Tente novamente em ${err.retryAfterMs}ms`);
+  } else if (err instanceof HermesAuthError) {
+    console.error('API Key inválida ou expirada');
+  } else if (err instanceof HermesNetworkError) {
+    console.error('Problema de conectividade ao chamar a API');
+  }
+}
+```
+**Nota:** Por padrão, o SDK irá tentar realizar *retry* caso a API retorne erros de indisponibilidade (502, 503, 504) ou Rate Limit. Isso pode ser configurado via `retry` em `HermesClientConfig`.
+
 ---
 
 ## 🔄 Rotação Automática de Chaves (Webhooks)

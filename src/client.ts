@@ -3,6 +3,13 @@ import { MemoryAdapter } from './storage/MemoryAdapter';
 import { LiteEventEmitter } from './emitter';
 import { EmailBuilder } from './builder';
 import { BulkEmailBuilder } from './bulkEmailBuilder';
+import { withRetry, DEFAULT_RETRY_CONFIG, RetryConfig } from './retry';
+import {
+	HermesError,
+	HermesAuthError,
+	HermesRateLimitError,
+	HermesNetworkError,
+} from './errors';
 
 export class HermesClient extends LiteEventEmitter {
 	private config: HermesClientConfig;
@@ -25,14 +32,36 @@ export class HermesClient extends LiteEventEmitter {
 		return new BulkEmailBuilder(this);
 	}
 
+	private async parseErrorResponse(response: Response): Promise<Error> {
+		const errorData = await response.json().catch(() => null);
+		const message = errorData?.message || errorData?.error || response.statusText;
+
+		if (response.status === 401 || response.status === 403) {
+			return new HermesAuthError(message, response.status);
+		}
+		if (response.status === 429) {
+			const retryAfter = response.headers.get('retry-after');
+			const retryAfterMs = retryAfter ? parseInt(retryAfter, 10) * 1000 : undefined;
+			return new HermesRateLimitError(message, retryAfterMs);
+		}
+
+		return new HermesError(
+			`Hermes API Error: ${response.status} ${response.statusText} - ${JSON.stringify(errorData)}`,
+			'API_ERROR',
+			response.status,
+			errorData
+		);
+	}
+
 	// Dispara o envio de um e-mail.
 	// Utiliza a chave armazenada mais recente para evitar bloqueios por expiração.
 	async sendEmail(payload: SendEmailPayload) {
 		const apiKey = await this.config.storageAdapter?.getApiKey();
 
 		if (!apiKey) {
-			const err = new Error(
+			const err = new HermesError(
 				'HermesClient: API Key is missing. Please provide it via StorageAdapter or initialApiKey.',
+				'AUTH_MISSING_KEY'
 			);
 			this.emit('error', err);
 			throw err;
@@ -45,25 +74,43 @@ export class HermesClient extends LiteEventEmitter {
 
 		const url = `${this.config.baseUrl}/api/emails`;
 
-		const response = await fetch(url, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-				'x-api-key': apiKey,
-			},
-			body: JSON.stringify(payload),
-		});
+		const fn = async () => {
+			const response = await fetch(url, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'x-api-key': apiKey,
+				},
+				body: JSON.stringify(payload),
+			}).catch((err) => {
+				throw new HermesNetworkError('Falha de rede ao conectar com Hermes API', err);
+			});
 
-		if (!response.ok) {
-			const errorData = await response.json().catch(() => null);
-			const err = new Error(
-				`Hermes API Error: ${response.status} ${response.statusText} - ${JSON.stringify(errorData)}`,
-			);
-			this.emit('error', err);
-			throw err;
+			if (!response.ok) {
+				throw await this.parseErrorResponse(response);
+			}
+
+			return response.json();
+		};
+
+		if (this.config.retry === false) {
+			return fn().catch((err) => {
+				this.emit('error', err);
+				throw err;
+			});
 		}
 
-		return response.json();
+		const retryConfig: RetryConfig = {
+			...DEFAULT_RETRY_CONFIG,
+			...(this.config.retry || {}),
+		};
+
+		return withRetry(fn, retryConfig, (attempt, error, delayMs) => {
+			this.emit('retry', attempt, error, delayMs);
+		}).catch((err) => {
+			this.emit('error', err);
+			throw err;
+		});
 	}
 
 	// Permite atualizar a chave diretamente em tempo de execução
@@ -87,31 +134,50 @@ export class HermesClient extends LiteEventEmitter {
 	async sendBulkEmails(emails: SendEmailPayload[]): Promise<any> {
 		const apiKey = await this.config.storageAdapter!.getApiKey();
 		if (!apiKey) {
-			const err = new Error(
+			const err = new HermesError(
 				'HermesClient: API Key is missing. Please provide it via StorageAdapter or initialApiKey.',
+				'AUTH_MISSING_KEY'
 			);
 			this.emit('error', err);
 			throw err;
 		}
 
-		const response = await fetch(`${this.config.baseUrl}/api/emails/bulk`, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-				'X-API-Key': apiKey,
-			},
-			body: JSON.stringify({ emails }),
+		const fn = async () => {
+			const response = await fetch(`${this.config.baseUrl}/api/emails/bulk`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'X-API-Key': apiKey,
+				},
+				body: JSON.stringify({ emails }),
+			}).catch((err) => {
+				throw new HermesNetworkError('Falha de rede ao conectar com Hermes API', err);
+			});
+
+			if (!response.ok) {
+				throw await this.parseErrorResponse(response);
+			}
+
+			return response.json();
+		};
+
+		if (this.config.retry === false) {
+			return fn().catch((err) => {
+				this.emit('error', err);
+				throw err;
+			});
+		}
+
+		const retryConfig: RetryConfig = {
+			...DEFAULT_RETRY_CONFIG,
+			...(this.config.retry || {}),
+		};
+
+		return withRetry(fn, retryConfig, (attempt, error, delayMs) => {
+			this.emit('retry', attempt, error, delayMs);
+		}).catch((err) => {
+			this.emit('error', err);
+			throw err;
 		});
-
-		if (!response.ok) {
-			const errorData = await response.json().catch(() => null);
-			const err = new Error(
-				`Hermes API Bulk Error: ${response.status} ${response.statusText} - ${JSON.stringify(errorData)}`,
-			);
-			this.emit('error', err);
-			throw err;
-		}
-
-		return response.json();
 	}
 }
