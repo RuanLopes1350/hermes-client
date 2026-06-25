@@ -46,6 +46,29 @@ await hermes.email()
 
 *(Nota: O método legado `hermes.sendEmail(payload)` ainda é suportado para garantir retrocompatibilidade com aplicações já integradas).*
 
+### 3. Enviando E-mails em Bulk
+Para o envio de múltiplos e-mails em uma mesma chamada.
+```typescript
+await hermes.bulk()
+  .email()
+    .to('alice@example.com')
+    .subject('Bem-vinda!')
+    .useTemplate('onboarding-tpl', { name: 'Alice' })
+    .done()
+  .email()
+    .to('bob@example.com')
+    .subject('Bem-vindo!')
+    .useTemplate('onboarding-tpl', { name: 'Bob' })
+    .done()
+  .send();
+
+// Forma direta com array
+await hermes.sendBulkEmails([
+  { recipient_to: 'alice@example.com', subject: 'Olá', template_id: 'tpl-1', variables: { name: 'Alice' } },
+  { recipient_to: 'bob@example.com', subject: 'Olá', template_id: 'tpl-1', variables: { name: 'Bob' } },
+]);
+```
+
 ---
 
 ## 🔄 Rotação Automática de Chaves (Webhooks)

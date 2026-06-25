@@ -2,6 +2,7 @@ import { HermesClientConfig, SendEmailPayload } from './types';
 import { MemoryAdapter } from './storage/MemoryAdapter';
 import { LiteEventEmitter } from './emitter';
 import { EmailBuilder } from './builder';
+import { BulkEmailBuilder } from './bulkEmailBuilder';
 
 export class HermesClient extends LiteEventEmitter {
 	private config: HermesClientConfig;
@@ -17,6 +18,11 @@ export class HermesClient extends LiteEventEmitter {
 	// Cria um novo EmailBuilder usando o padrão fluído.
 	email(): EmailBuilder {
 		return new EmailBuilder(this);
+	}
+
+	// Cria um novo BulkEmailBuilder para envio em massa.
+	bulk(): BulkEmailBuilder {
+		return new BulkEmailBuilder(this);
 	}
 
 	// Dispara o envio de um e-mail.
@@ -76,5 +82,36 @@ export class HermesClient extends LiteEventEmitter {
 			return true;
 		}
 		return false;
+	}
+
+	async sendBulkEmails(emails: SendEmailPayload[]): Promise<any> {
+		const apiKey = await this.config.storageAdapter!.getApiKey();
+		if (!apiKey) {
+			const err = new Error(
+				'HermesClient: API Key is missing. Please provide it via StorageAdapter or initialApiKey.',
+			);
+			this.emit('error', err);
+			throw err;
+		}
+
+		const response = await fetch(`${this.config.baseUrl}/api/emails/bulk`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				'X-API-Key': apiKey,
+			},
+			body: JSON.stringify({ emails }),
+		});
+
+		if (!response.ok) {
+			const errorData = await response.json().catch(() => null);
+			const err = new Error(
+				`Hermes API Bulk Error: ${response.status} ${response.statusText} - ${JSON.stringify(errorData)}`,
+			);
+			this.emit('error', err);
+			throw err;
+		}
+
+		return response.json();
 	}
 }
