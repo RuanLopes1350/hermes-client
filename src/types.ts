@@ -1,4 +1,5 @@
 import { RetryConfig } from './retry';
+import { LogLevel } from './logger';
 
 export interface HermesClientConfig {
 	// URL do seu servidor Hermes. Exemplo: https://hermes.example.com
@@ -11,6 +12,8 @@ export interface HermesClientConfig {
 	retry?: Partial<RetryConfig> | false;
 	// Timeout em milissegundos para requisições HTTP. Se não fornecido, o valor padrão (30000ms) será usado.
 	timeoutMs?: number;
+	// Nível de log a ser impresso no console. Padrão: 'silent'
+	logLevel?: LogLevel;
 }
 
 export interface StorageAdapter {

@@ -11,8 +11,10 @@ import {
 	HermesNetworkError,
 	HermesTimeoutError,
 } from './errors';
+import { HermesLogger } from './logger';
 
 export class HermesClient extends LiteEventEmitter {
+	public logger: HermesLogger;
 	private config: HermesClientConfig;
 
 	constructor(config: HermesClientConfig) {
@@ -21,6 +23,8 @@ export class HermesClient extends LiteEventEmitter {
 			...config,
 			storageAdapter: config.storageAdapter || new MemoryAdapter(config.initialApiKey),
 		};
+		this.logger = new HermesLogger(config.logLevel);
+		this.logger.debug('HermesClient initialized');
 	}
 
 	// Cria um novo EmailBuilder usando o padrão fluído.

@@ -21,6 +21,7 @@ import { HermesClient, MemoryAdapter } from '@ruanlopes1350/hermes-client';
 const hermes = new HermesClient({
   baseUrl: 'https://seu-hermes-api.com',
   timeoutMs: 30000, // <-- Opcional: timeout para os requests (padrão é 30000ms)
+  logLevel: 'warn', // <-- Opcional: níveis possíveis: 'debug', 'info', 'warn', 'error', 'silent' (padrão)
   // O MemoryAdapter é usado por padrão, mas você pode usar o seu próprio (ex: RedisAdapter)
   storageAdapter: new MemoryAdapter('sk_live_sua_chave_inicial_aqui')
 });
