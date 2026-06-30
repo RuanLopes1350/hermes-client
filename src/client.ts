@@ -9,6 +9,7 @@ import {
 	HermesAuthError,
 	HermesRateLimitError,
 	HermesNetworkError,
+	HermesTimeoutError,
 } from './errors';
 
 export class HermesClient extends LiteEventEmitter {
@@ -75,22 +76,35 @@ export class HermesClient extends LiteEventEmitter {
 		const url = `${this.config.baseUrl}/api/emails`;
 
 		const fn = async () => {
-			const response = await fetch(url, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					'x-api-key': apiKey,
-				},
-				body: JSON.stringify(payload),
-			}).catch((err) => {
+			const timeoutMs = this.config.timeoutMs ?? 30000;
+			const controller = new AbortController();
+			const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+			try {
+				const response = await fetch(url, {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						'x-api-key': apiKey,
+					},
+					body: JSON.stringify(payload),
+					signal: controller.signal,
+				});
+
+				if (!response.ok) {
+					throw await this.parseErrorResponse(response);
+				}
+
+				return response.json();
+			} catch (err: any) {
+				if (err.name === 'AbortError') {
+					throw new HermesTimeoutError(timeoutMs);
+				}
+				if (err instanceof HermesError) throw err;
 				throw new HermesNetworkError('Falha de rede ao conectar com Hermes API', err);
-			});
-
-			if (!response.ok) {
-				throw await this.parseErrorResponse(response);
+			} finally {
+				clearTimeout(timeoutId);
 			}
-
-			return response.json();
 		};
 
 		if (this.config.retry === false) {
@@ -143,22 +157,35 @@ export class HermesClient extends LiteEventEmitter {
 		}
 
 		const fn = async () => {
-			const response = await fetch(`${this.config.baseUrl}/api/emails/bulk`, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					'X-API-Key': apiKey,
-				},
-				body: JSON.stringify({ emails }),
-			}).catch((err) => {
+			const timeoutMs = this.config.timeoutMs ?? 30000;
+			const controller = new AbortController();
+			const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+			try {
+				const response = await fetch(`${this.config.baseUrl}/api/emails/bulk`, {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						'X-API-Key': apiKey,
+					},
+					body: JSON.stringify({ emails }),
+					signal: controller.signal,
+				});
+
+				if (!response.ok) {
+					throw await this.parseErrorResponse(response);
+				}
+
+				return response.json();
+			} catch (err: any) {
+				if (err.name === 'AbortError') {
+					throw new HermesTimeoutError(timeoutMs);
+				}
+				if (err instanceof HermesError) throw err;
 				throw new HermesNetworkError('Falha de rede ao conectar com Hermes API', err);
-			});
-
-			if (!response.ok) {
-				throw await this.parseErrorResponse(response);
+			} finally {
+				clearTimeout(timeoutId);
 			}
-
-			return response.json();
 		};
 
 		if (this.config.retry === false) {

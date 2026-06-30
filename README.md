@@ -20,6 +20,7 @@ import { HermesClient, MemoryAdapter } from '@ruanlopes1350/hermes-client';
 
 const hermes = new HermesClient({
   baseUrl: 'https://seu-hermes-api.com',
+  timeoutMs: 30000, // <-- Opcional: timeout para os requests (padrão é 30000ms)
   // O MemoryAdapter é usado por padrão, mas você pode usar o seu próprio (ex: RedisAdapter)
   storageAdapter: new MemoryAdapter('sk_live_sua_chave_inicial_aqui')
 });
@@ -34,6 +35,8 @@ await hermes.email()
   .to('cliente@empresa.com')
   .subject('Bem-vindo ao Sistema!')
   .useTemplate('1234-uuid-do-template', { nome: 'João da Silva' })
+  .priority('high') // <-- Opcional
+  .credential('minha-credencial-id') // <-- Opcional
   .send();
 
 // Exemplo com envio de HTML direto
