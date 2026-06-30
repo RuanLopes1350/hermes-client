@@ -1,5 +1,5 @@
 import type { HermesClient } from './client';
-import type { SendEmailPayload } from './types';
+import type { SendEmailPayload, EmailPriority } from './types';
 import { EmailBuilder } from './builder';
 
 export class BulkEmailBuilder {
@@ -74,6 +74,10 @@ class BulkItemBuilder {
 	}
 	credential(id: string): this {
 		this.payload.credential_id = id;
+		return this;
+	}
+	priority(level: EmailPriority): this {
+		this.payload.priority = level;
 		return this;
 	}
 	schedule(date: Date | string): this {

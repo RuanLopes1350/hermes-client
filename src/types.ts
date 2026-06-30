@@ -18,6 +18,8 @@ export interface StorageAdapter {
 	setApiKey(key: string): void | Promise<void>;
 }
 
+export type EmailPriority = 'high' | 'medium' | 'low';
+
 export interface SendEmailPayload {
 	recipient_to: string;
 	subject: string;
@@ -32,6 +34,7 @@ export interface SendEmailPayload {
 	credential_id?: string;
 	scheduled_at?: string;
 	variables?: Record<string, any>;
+	priority?: EmailPriority;
 }
 
 export interface WebhookPayload {

@@ -1,5 +1,5 @@
 import { HermesClient } from './client';
-import { SendEmailPayload } from './types';
+import { SendEmailPayload, EmailPriority } from './types';
 
 export class EmailBuilder {
 	private payload: Partial<SendEmailPayload> = {};
@@ -53,6 +53,12 @@ export class EmailBuilder {
 	// Opcional: Define qual credencial (conta SMTP configurada no Hermes) utilizar para o envio.
 	credential(id: string): this {
 		this.payload.credential_id = id;
+		return this;
+	}
+
+	// Opcional: Define a prioridade na fila de processamento.
+	priority(level: EmailPriority): this {
+		this.payload.priority = level;
 		return this;
 	}
 
