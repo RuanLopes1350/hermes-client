@@ -104,6 +104,23 @@ try {
 ```
 **Nota:** Por padrão, o SDK irá tentar realizar *retry* caso a API retorne erros de indisponibilidade (502, 503, 504) ou Rate Limit. Isso pode ser configurado via `retry` em `HermesClientConfig`.
 
+### 6. Helpers para Templates
+O SDK conta com o objeto `templateHelpers` utilitário para facilitar o envio de variáveis formatadas comuns (como datas, moeda e saudações) sem que você precise reescrever formatações nativas.
+
+```typescript
+import { templateHelpers } from '@ruanlopes1350/hermes-client';
+
+await hermes.email()
+  .to('cliente@x.com')
+  .subject('Pedido confirmado')
+  .useTemplate('order-confirmation', {
+    greeting: templateHelpers.greeting('João'), // "Boa tarde, João"
+    orderDate: templateHelpers.formatDate(new Date()), // "20 de maio de 2026"
+    total: templateHelpers.formatCurrency(149.90), // "R$ 149,90"
+  })
+  .send();
+```
+
 ---
 
 ## 🔄 Rotação Automática de Chaves (Webhooks)
