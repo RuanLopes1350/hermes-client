@@ -20,6 +20,11 @@
       "types": "./dist/next.d.ts",
       "import": "./dist/next.mjs",
       "require": "./dist/next.js"
+    },
+    "./fastify": {
+      "types": "./dist/fastify.d.ts",
+      "import": "./dist/fastify.mjs",
+      "require": "./dist/fastify.js"
     }
   },
   "files": [

@@ -137,6 +137,21 @@ import { hermes } from '@/lib/hermes'; // A instância que você criou no passo 
 export const POST = nextWebhookHandler(hermes, process.env.HERMES_WEBHOOK_SECRET!);
 ```
 
+### Opção C: Usando com Fastify
+Importe o handler oficial para Fastify (lembre-se de configurar a leitura de body cru / `rawBody` no seu framework caso necessário).
+
+```typescript
+import fastify from 'fastify';
+import { fastifyWebhookHandler } from '@ruanlopes1350/hermes-client/fastify';
+
+const app = fastify();
+
+app.post(
+  '/webhook/hermes', 
+  fastifyWebhookHandler(hermes, process.env.HERMES_WEBHOOK_SECRET!)
+);
+```
+
 ---
 
 ## 📡 Eventos (Ciclo de Vida)
