@@ -16,7 +16,12 @@ export function verifyHermesSignature(
 
 	const expectedSignature = crypto.createHmac('sha256', secret).update(rawBody).digest('hex');
 
-	return signature === expectedSignature;
+	// Proteção contra timing attacks
+	const sigBuffer = Buffer.from(signature, 'utf-8');
+	const expectedBuffer = Buffer.from(expectedSignature, 'utf-8');
+
+	if (sigBuffer.length !== expectedBuffer.length) return false;
+	return crypto.timingSafeEqual(sigBuffer, expectedBuffer);
 }
 
 // Utilitário completo para extrair o payload validado. Retorna null se for fraudulento.
