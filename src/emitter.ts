@@ -1,25 +1,39 @@
-type EventCallback = (...args: any[]) => void;
+export interface HermesEventMap {
+	keyRotated: (newKey: string, oldKey: string | null) => void;
+	error: (error: Error) => void;
+	retry: (attempt: number, error: Error, delayMs: number) => void;
+	requestStart: (method: string, url: string) => void;
+	requestEnd: (method: string, url: string, status: number, durationMs: number) => void;
+}
+
+export type HermesEvent = keyof HermesEventMap;
 
 export class LiteEventEmitter {
-	private events: Record<string, EventCallback[]> = {};
+	private listeners = new Map<string, Set<Function>>();
 
-	on(event: string, callback: EventCallback) {
-		if (!this.events[event]) {
-			this.events[event] = [];
-		}
-		this.events[event].push(callback);
+	on<K extends HermesEvent>(event: K, callback: HermesEventMap[K]): this {
+		if (!this.listeners.has(event)) this.listeners.set(event, new Set());
+		this.listeners.get(event)!.add(callback);
 		return this;
 	}
 
-	off(event: string, callback: EventCallback) {
-		if (!this.events[event]) return this;
-		this.events[event] = this.events[event].filter((cb) => cb !== callback);
+	once<K extends HermesEvent>(event: K, callback: HermesEventMap[K]): this {
+		const wrapper = (...args: any[]) => {
+			this.off(event, wrapper as any);
+			(callback as Function)(...args);
+		};
+		return this.on(event, wrapper as any);
+	}
+
+	off<K extends HermesEvent>(event: K, callback: HermesEventMap[K]): this {
+		this.listeners.get(event)?.delete(callback);
 		return this;
 	}
 
-	emit(event: string, ...args: any[]) {
-		if (!this.events[event]) return false;
-		this.events[event].forEach((cb) => cb(...args));
+	emit<K extends HermesEvent>(event: K, ...args: Parameters<HermesEventMap[K]>): boolean {
+		const set = this.listeners.get(event);
+		if (!set || set.size === 0) return false;
+		for (const fn of set) fn(...args);
 		return true;
 	}
 }
