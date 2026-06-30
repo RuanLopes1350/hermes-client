@@ -50,6 +50,12 @@ export class EmailBuilder {
 		return this;
 	}
 
+	// Opcional: Define qual credencial (conta SMTP configurada no Hermes) utilizar para o envio.
+	credential(id: string): this {
+		this.payload.credential_id = id;
+		return this;
+	}
+
 	// Dispara o envio chamando o HermesClient.
 	async send() {
 		if (!this.payload.recipient_to) throw new Error("O campo 'to' é obrigatório.");
