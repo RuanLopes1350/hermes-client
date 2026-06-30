@@ -149,6 +149,21 @@ export class HermesClient extends LiteEventEmitter {
 		return false;
 	}
 
+	// Consulta o estado da API do Hermes
+	async healthCheck(): Promise<{ status: string; uptime: number }> {
+		const response = await fetch(`${this.config.baseUrl}/api/health`, {
+			method: 'GET',
+		}).catch((err) => {
+			throw new HermesNetworkError('Falha de rede ao conectar com Hermes API (healthcheck)', err);
+		});
+
+		if (!response.ok) {
+			throw new HermesError('Health check falhou', 'HEALTH_CHECK_FAILED', response.status);
+		}
+
+		return response.json();
+	}
+
 	async sendBulkEmails(emails: SendEmailPayload[]): Promise<any> {
 		const apiKey = await this.config.storageAdapter!.getApiKey();
 		if (!apiKey) {

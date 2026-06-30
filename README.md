@@ -73,7 +73,14 @@ await hermes.sendBulkEmails([
 ]);
 ```
 
-### 4. Tratamento de Erros e Retentativas Automáticas
+### 4. Verificando o Health Check
+Para aplicações que necessitam validar se a infraestrutura está online antes de processar filas, o SDK disponibiliza um método direto de ping para a API:
+```typescript
+const isHermesOk = await hermes.healthCheck();
+console.log(isHermesOk.status); // "ok"
+```
+
+### 5. Tratamento de Erros e Retentativas Automáticas
 O Hermes SDK possui suporte inteligente para retry automático (Backoff Exponencial) e expõe classes de erros tipadas. Dessa forma, você pode diferenciar os cenários e aplicar lógicas exclusivas.
 
 ```typescript
