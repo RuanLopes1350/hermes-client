@@ -2,6 +2,12 @@
 
 SDK oficial em Node.js/TypeScript para integrar com o **Hermes - Gateway de E-mails Transacionais**. Este SDK fornece uma interface moderna e encadeada (Builder pattern) para o envio de e-mails, além de gerenciar **automaticamente a rotação de API Keys** em tempo real usando Webhooks assinados com HMAC-SHA256.
 
+---
+
+[API Backend](https://github.com/RuanLopes1350/hermes-api) • [Painel Frontend](https://github.com/RuanLopes1350/hermes-front)
+
+---
+
 ## 📦 Instalação
 
 ```bash
