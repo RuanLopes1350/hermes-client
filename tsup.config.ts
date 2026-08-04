@@ -3,6 +3,7 @@ import { defineConfig } from 'tsup';
 export default defineConfig({
   entry: [
     'src/index.ts',
+    'src/node.ts',
     'src/frameworks/express.ts',
     'src/frameworks/next.ts',
     'src/frameworks/fastify.ts'

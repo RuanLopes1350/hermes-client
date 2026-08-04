@@ -20,7 +20,7 @@ export function nextWebhookHandler(client: HermesClient, secret: string) {
 			// Pega o raw body como string para validar o HMAC
 			const rawBody = await req.text();
 
-			const payload = parseWebhookPayload(rawBody, signature, secret);
+			const payload = await parseWebhookPayload(rawBody, signature, secret);
 
 			if (!payload) {
 				return new Response(JSON.stringify({ error: 'Assinatura inválida.' }), {

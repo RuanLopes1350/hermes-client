@@ -1,37 +1,53 @@
-import * as crypto from 'crypto';
 import type { WebhookPayload } from './types';
 
 /**
  * Valida a assinatura de um Webhook recebido do Hermes
- * @param rawBody - O corpo da requisição exatamente como recebido (string pura para garantir o HMAC)
+ * Funciona em Edge runtimes utilizando a Web Crypto API
+ * @param rawBody - O corpo da requisição exatamente como recebido (Uint8Array ou string pura)
  * @param signature - O cabeçalho 'x-hermes-signature'
  * @param secret - A senha secreta do webhook configurada no painel do Hermes
  */
-export function verifyHermesSignature(
-	rawBody: string | Buffer,
+export async function verifyHermesSignature(
+	rawBody: string | Uint8Array,
 	signature: string,
 	secret: string,
-): boolean {
+): Promise<boolean> {
 	if (!signature || !secret || !rawBody) return false;
 
-	const expectedSignature = crypto.createHmac('sha256', secret).update(rawBody).digest('hex');
+	const encoder = new TextEncoder();
+	const key = await crypto.subtle.importKey(
+		'raw',
+		encoder.encode(secret),
+		{ name: 'HMAC', hash: 'SHA-256' },
+		false,
+		['sign']
+	);
 
-	// Proteção contra timing attacks
-	const sigBuffer = Buffer.from(signature, 'utf-8');
-	const expectedBuffer = Buffer.from(expectedSignature, 'utf-8');
+	const data = typeof rawBody === 'string' ? encoder.encode(rawBody) : rawBody;
+	const signatureBytes = await crypto.subtle.sign('HMAC', key, data as any);
+	
+	const computedHex = Array.from(new Uint8Array(signatureBytes))
+		.map(b => b.toString(16).padStart(2, '0'))
+		.join('');
 
-	if (sigBuffer.length !== expectedBuffer.length) return false;
-	return crypto.timingSafeEqual(sigBuffer, expectedBuffer);
+	// Comparação timing-safe básica
+	if (computedHex.length !== signature.length) return false;
+	let isEqual = true;
+	for (let i = 0; i < computedHex.length; i++) {
+		if (computedHex[i] !== signature[i]) isEqual = false;
+	}
+	return isEqual;
 }
 
 // Utilitário completo para extrair o payload validado. Retorna null se for fraudulento.
-export function parseWebhookPayload(
-	rawBody: string,
+export async function parseWebhookPayload(
+	rawBody: string | Uint8Array,
 	signature: string,
 	secret: string,
-): WebhookPayload | null {
-	if (!verifyHermesSignature(rawBody, signature, secret)) {
+): Promise<WebhookPayload | null> {
+	if (!(await verifyHermesSignature(rawBody, signature, secret))) {
 		return null;
 	}
-	return JSON.parse(rawBody.toString()) as WebhookPayload;
+	const bodyStr = typeof rawBody === 'string' ? rawBody : new TextDecoder().decode(rawBody);
+	return JSON.parse(bodyStr) as WebhookPayload;
 }

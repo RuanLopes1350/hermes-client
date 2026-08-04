@@ -6,7 +6,6 @@ export * from './webhook';
 export * from './emitter';
 export * from './stream';
 export * from './storage/MemoryAdapter';
-export * from './storage/EnvAdapter';
 export * from './errors';
 export * from './retry';
 export * from './logger';

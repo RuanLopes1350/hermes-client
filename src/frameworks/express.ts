@@ -27,7 +27,7 @@ export function expressWebhookHandler(client: HermesClient, secret: string) {
 				});
 			}
 
-			const payload = parseWebhookPayload(rawBody.toString('utf-8'), signature, secret);
+			const payload = await parseWebhookPayload(rawBody.toString('utf-8'), signature, secret);
 
 			if (!payload) {
 				return res.status(401).json({ error: 'Assinatura inválida.' });

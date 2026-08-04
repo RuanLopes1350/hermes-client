@@ -14,6 +14,8 @@ import {
 import { HermesLogger } from './logger';
 import { HermesStream } from './stream';
 
+const API_KEY_HEADER = 'X-API-Key' as const;
+
 export class HermesClient extends LiteEventEmitter {
 	public logger: HermesLogger;
 	public readonly stream: HermesStream;
@@ -96,7 +98,7 @@ export class HermesClient extends LiteEventEmitter {
 					method: 'POST',
 					headers: {
 						'Content-Type': 'application/json',
-						'x-api-key': apiKey,
+						[API_KEY_HEADER]: apiKey,
 					},
 					body: JSON.stringify(payload),
 					signal: controller.signal,
@@ -192,7 +194,7 @@ export class HermesClient extends LiteEventEmitter {
 					method: 'POST',
 					headers: {
 						'Content-Type': 'application/json',
-						'X-API-Key': apiKey,
+						[API_KEY_HEADER]: apiKey,
 					},
 					body: JSON.stringify({ emails }),
 					signal: controller.signal,

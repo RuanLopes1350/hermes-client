@@ -20,7 +20,7 @@ export function fastifyWebhookHandler(client: HermesClient, secret: string) {
 				? request.rawBody
 				: request.rawBody.toString('utf8');
 
-			const payload = parseWebhookPayload(rawBody, signature, secret);
+			const payload = await parseWebhookPayload(rawBody, signature, secret);
 			if (!payload) {
 				return reply.status(401).send({ error: 'Assinatura inválida.' });
 			}

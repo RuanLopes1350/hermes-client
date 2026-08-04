@@ -11,6 +11,11 @@
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
     },
+    "./node": {
+      "types": "./dist/node.d.ts",
+      "import": "./dist/node.mjs",
+      "require": "./dist/node.js"
+    },
     "./express": {
       "types": "./dist/frameworks/express.d.ts",
       "import": "./dist/frameworks/express.mjs",
