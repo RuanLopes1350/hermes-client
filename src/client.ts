@@ -1,4 +1,4 @@
-import { HermesClientConfig, SendEmailPayload } from './types';
+import { HermesClientConfig, SendEmailPayload, HermesResponse } from './types';
 import { MemoryAdapter } from './storage/MemoryAdapter';
 import { LiteEventEmitter } from './emitter';
 import { EmailBuilder } from './builder';
@@ -60,7 +60,7 @@ export class HermesClient extends LiteEventEmitter {
 
 	// Dispara o envio de um e-mail.
 	// Utiliza a chave armazenada mais recente para evitar bloqueios por expiração.
-	async sendEmail(payload: SendEmailPayload) {
+	async sendEmail(payload: SendEmailPayload): Promise<HermesResponse> {
 		const apiKey = await this.config.storageAdapter?.getApiKey();
 
 		if (!apiKey) {
@@ -164,7 +164,7 @@ export class HermesClient extends LiteEventEmitter {
 		return response.json();
 	}
 
-	async sendBulkEmails(emails: SendEmailPayload[]): Promise<any> {
+	async sendBulkEmails(emails: SendEmailPayload[]): Promise<HermesResponse> {
 		const apiKey = await this.config.storageAdapter!.getApiKey();
 		if (!apiKey) {
 			const err = new HermesError(

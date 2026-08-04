@@ -45,3 +45,12 @@ export interface WebhookPayload {
 	newApiKey: string;
 	rotatedAt: string;
 }
+
+export interface HermesResponse<T = any> {
+	error: boolean;
+	code: number;
+	message: string | null;
+	data: T;
+	errors: any[];
+	metadata?: any;
+}

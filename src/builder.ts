@@ -1,5 +1,5 @@
 import { HermesClient } from './client';
-import { SendEmailPayload, EmailPriority } from './types';
+import { SendEmailPayload, EmailPriority, HermesResponse } from './types';
 
 export class EmailBuilder {
 	private payload: Partial<SendEmailPayload> = {};
@@ -63,7 +63,7 @@ export class EmailBuilder {
 	}
 
 	// Dispara o envio chamando o HermesClient.
-	async send() {
+	async send(): Promise<HermesResponse> {
 		if (!this.payload.recipient_to) throw new Error("O campo 'to' é obrigatório.");
 		if (!this.payload.subject) throw new Error("O campo 'subject' é obrigatório.");
 		if (!this.payload.body && !this.payload.template_id) {

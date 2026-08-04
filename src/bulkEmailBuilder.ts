@@ -1,5 +1,5 @@
 import type { HermesClient } from './client';
-import type { SendEmailPayload, EmailPriority } from './types';
+import type { SendEmailPayload, EmailPriority, HermesResponse } from './types';
 import { EmailBuilder } from './builder';
 
 export class BulkEmailBuilder {
@@ -32,7 +32,7 @@ export class BulkEmailBuilder {
 	}
 
 	// Envia todos os emails
-	async send(): Promise<any> {
+	async send(): Promise<HermesResponse> {
 		if (this.emails.length === 0) {
 			throw new Error('Nenhum email para enviar. Adicione emails antes de chamar send().');
 		}
