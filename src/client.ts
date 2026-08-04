@@ -12,9 +12,11 @@ import {
 	HermesTimeoutError,
 } from './errors';
 import { HermesLogger } from './logger';
+import { HermesStream } from './stream';
 
 export class HermesClient extends LiteEventEmitter {
 	public logger: HermesLogger;
+	public readonly stream: HermesStream;
 	private config: HermesClientConfig;
 
 	constructor(config: HermesClientConfig) {
@@ -24,7 +26,12 @@ export class HermesClient extends LiteEventEmitter {
 			storageAdapter: config.storageAdapter || new MemoryAdapter(config.initialApiKey),
 		};
 		this.logger = new HermesLogger(config.logLevel);
+		this.stream = new HermesStream(this);
 		this.logger.debug('HermesClient initialized');
+	}
+
+	public getConfig() {
+		return this.config;
 	}
 
 	// Cria um novo EmailBuilder usando o padrão fluído.
