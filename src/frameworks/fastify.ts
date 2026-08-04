@@ -9,11 +9,16 @@ export function fastifyWebhookHandler(client: HermesClient, secret: string) {
 				return reply.status(401).send({ error: 'Assinatura ausente.' });
 			}
 
-			// Fastify com rawBody habilitado
-			const rawBody =
-				typeof request.body === 'string'
-					? request.body
-					: JSON.stringify(request.body);
+			// Fastify com rawBody habilitado (plugin fastify-raw-body necessário)
+			if (!request.rawBody) {
+				return reply.status(500).send({ 
+					error: 'Fastify raw-body plugin is required. Install fastify-raw-body.' 
+				});
+			}
+
+			const rawBody = typeof request.rawBody === 'string'
+				? request.rawBody
+				: request.rawBody.toString('utf8');
 
 			const payload = parseWebhookPayload(rawBody, signature, secret);
 			if (!payload) {
