@@ -65,7 +65,7 @@ await hermes.email()
   .to('newsletter@empresa.com')
   .subject('Newsletter Mensal')
   .useTemplate('newsletter-tpl', { mes: 'Julho' })
-  .scheduledAt(new Date('2026-08-01T09:00:00Z'))
+  .schedule(new Date('2026-08-01T09:00:00Z'))
   .send();
 ```
 
