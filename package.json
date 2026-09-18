@@ -41,6 +41,8 @@
     "dist"
   ],
   "scripts": {
+    "login": "npm login",
+    "publish": "npm publish --access public",
     "build": "tsup",
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
