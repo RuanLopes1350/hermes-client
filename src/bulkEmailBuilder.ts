@@ -1,6 +1,7 @@
 import type { HermesClient } from './client';
 import type { SendEmailPayload, EmailPriority, HermesResponse } from './types';
 import { EmailBuilder } from './builder';
+import { HermesValidationError } from './errors';
 
 export class BulkEmailBuilder {
 	private emails: SendEmailPayload[] = [];
@@ -31,6 +32,26 @@ export class BulkEmailBuilder {
 		return this.emails.length;
 	}
 
+	deduplicate(): this {
+		const seen = new Set<string>();
+		const originalCount = this.emails.length;
+		this.emails = this.emails.filter((email) => {
+			if (!email.recipient_to) return false;
+			const normalized = email.recipient_to.toLowerCase().trim();
+			if (seen.has(normalized)) return false;
+			seen.add(normalized);
+			return true;
+		});
+
+		const removed = originalCount - this.emails.length;
+		if (removed > 0) {
+			this.client.logger.warn(
+				`Deduplicate: Removidos ${removed} emails duplicados do envio em lote.`,
+			);
+		}
+		return this;
+	}
+
 	// Envia todos os emails
 	async send(): Promise<HermesResponse> {
 		if (this.emails.length === 0) {
@@ -39,7 +60,7 @@ export class BulkEmailBuilder {
 		if (this.emails.length > 100) {
 			throw new Error('O envio em massa suporta no máximo 100 emails por vez.');
 		}
-        return this.client.sendBulkEmails(this.emails);
+		return this.client.sendBulkEmails(this.emails);
 	}
 }
 
@@ -85,13 +106,18 @@ class BulkItemBuilder {
 		return this;
 	}
 
-	/** Finaliza este email e retorna ao BulkEmailBuilder */
+	// Finaliza este email e retorna ao BulkEmailBuilder
 	done(): BulkEmailBuilder {
-		if (!this.payload.recipient_to || !this.payload.subject) {
-			throw new Error('Cada email precisa de "to" e "subject".');
+		if (!this.payload.recipient_to || this.payload.subject) {
+			throw new HermesValidationError("Cada email precisa de 'to' e 'subject'.", {
+				to: 'missing',
+				subject: 'missing',
+			});
 		}
 		if (!this.payload.body && !this.payload.template_id) {
-			throw new Error('Cada email precisa de "body" ou "template_id".');
+			throw new HermesValidationError('Cada email precisa de "body" ou "template_id".', {
+				content: 'missing',
+			});
 		}
 		this.parent._push(this.payload as SendEmailPayload);
 		return this.parent;

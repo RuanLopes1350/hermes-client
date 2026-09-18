@@ -1,10 +1,38 @@
-# Hermes Client SDK
+# 🕊️ Hermes Client SDK
 
-SDK oficial em Node.js/TypeScript para integrar com o **Hermes - Gateway de E-mails Transacionais**. Este SDK fornece uma interface moderna e encadeada (Builder pattern) para o envio de e-mails, streaming de status em tempo real via SSE, e **rotação automática de API Keys** via Webhooks assinados com HMAC-SHA256.
+> 🇬🇧 **Looking for the English version?** [README.en.md](README.en.md)
+
+<div align="center">
+
+[![npm](https://img.shields.io/badge/npm-%40ruanlopes1350%2Fhermes--client-red.svg)](https://www.npmjs.com/package/@ruanlopes1350/hermes-client)
+[![Version](https://img.shields.io/badge/version-1.2.2-blue.svg)](https://www.npmjs.com/package/@ruanlopes1350/hermes-client)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
+[![License](https://img.shields.io/badge/license-ISC-blue.svg)](LICENSE)
+
+**SDK oficial em Node.js/TypeScript para integração com o Hermes - Gateway de E-mails Transacionais.**
+
+[API Backend](https://github.com/RuanLopes1350/hermes-api) • [Painel Frontend](https://github.com/RuanLopes1350/hermes-front)
+
+</div>
 
 ---
 
-[API Backend](https://github.com/RuanLopes1350/hermes-api) • [Painel Frontend](https://github.com/RuanLopes1350/hermes-front)
+## 📋 Sumário
+
+- [Instalação](#-instalação)
+- [Inicialização](#-inicialização)
+- [Enviando E-mails](#-enviando-e-mails-builder-pattern)
+- [Envio em Bulk](#-enviando-e-mails-em-bulk)
+- [Streaming de Status (SSE)](#-streaming-de-status-sse)
+- [Health Check](#-health-check)
+- [Tratamento de Erros](#️-tratamento-de-erros-tipados)
+- [Helpers para Templates](#-helpers-para-templates)
+- [Rotação Automática de Chaves (Webhooks)](#-rotação-automática-de-chaves-webhooks)
+- [Eventos (Ciclo de Vida)](#-eventos-ciclo-de-vida)
+- [Storage Adapters](#️-storage-adapters)
+- [Configuração de Retry](#️-configuração-de-retry)
+- [Build e Distribuição](#-build-e-distribuição)
+- [Referência de Tipos](#-referência-de-tipos)
 
 ---
 
@@ -16,19 +44,17 @@ npm install @ruanlopes1350/hermes-client
 
 ---
 
-## 🚀 Como Usar
+## 🚀 Inicialização
 
-### 1. Inicialização
-
-O SDK precisa de um endereço do seu servidor Hermes e de uma estratégia de armazenamento para a chave (Storage Adapter).
+O SDK precisa do endereço do servidor Hermes e de uma estratégia de armazenamento para a API Key (Storage Adapter).
 
 ```typescript
 import { HermesClient, MemoryAdapter } from '@ruanlopes1350/hermes-client';
 
 const hermes = new HermesClient({
   baseUrl: 'https://seu-hermes-api.com',
-  timeoutMs: 30000,          // Opcional: timeout para os requests (padrão: 30000ms)
-  logLevel: 'warn',          // Opcional: 'debug' | 'info' | 'warn' | 'error' | 'silent' (padrão: 'silent')
+  timeoutMs: 30000,          // Opcional: timeout dos requests (padrão: 30000ms)
+  logLevel: 'warn',          // Opcional: 'debug' | 'info' | 'warn' | 'error' | 'silent'
   storageAdapter: new MemoryAdapter('hm_sua_chave_inicial_aqui'),
   retry: {                   // Opcional: configuração de retry (ou `false` para desabilitar)
     maxAttempts: 3,
@@ -40,7 +66,7 @@ const hermes = new HermesClient({
 });
 ```
 
-> **Nota:** A chave inicial pode ser passada diretamente ao `MemoryAdapter` ou via `initialApiKey` na configuração:
+> **Atalho:** Passe a chave diretamente em `initialApiKey` sem precisar instanciar um `MemoryAdapter` manualmente:
 > ```typescript
 > const hermes = new HermesClient({
 >   baseUrl: 'https://seu-hermes-api.com',
@@ -49,10 +75,12 @@ const hermes = new HermesClient({
 > ```
 > Quando nenhum `storageAdapter` é fornecido, o SDK cria automaticamente um `MemoryAdapter` usando a `initialApiKey`.
 
-### 2. Enviando E-mails (Builder Pattern — Recomendado)
+---
+
+## ✉️ Enviando E-mails (Builder Pattern)
 
 ```typescript
-// Com template do Hermes e variáveis dinâmicas
+// Com template MJML e variáveis dinâmicas
 await hermes.email()
   .to('cliente@empresa.com')
   .subject('Bem-vindo ao Sistema!')
@@ -72,11 +100,11 @@ await hermes.email()
 await hermes.email()
   .to('newsletter@empresa.com')
   .subject('Newsletter Mensal')
-  .useTemplate('newsletter-tpl', { mes: 'Julho' })
-  .schedule(new Date('2026-08-01T09:00:00Z'))
+  .useTemplate('newsletter-tpl', { mes: 'Setembro' })
+  .schedule(new Date('2026-10-01T09:00:00Z'))
   .send();
 
-// Injetando variáveis separadamente
+// Injetando variáveis separadamente com .variables()
 await hermes.email()
   .to('cliente@empresa.com')
   .subject('Relatório')
@@ -85,9 +113,11 @@ await hermes.email()
   .send();
 ```
 
-> **Retrocompatibilidade:** O método legado `hermes.sendEmail(payload)` ainda é suportado, assim como a propriedade `service_template_id` (que é mapeada automaticamente para `template_id`).
+> **Retrocompatibilidade:** O método legado `hermes.sendEmail(payload)` e a propriedade `service_template_id` ainda são suportados (mapeados automaticamente para `template_id`).
 
-### 3. Enviando E-mails em Bulk
+---
+
+## 📬 Enviando E-mails em Bulk
 
 O envio em massa suporta no máximo **100 e-mails por chamada**.
 
@@ -130,32 +160,40 @@ await hermes.sendBulkEmails([
 ]);
 ```
 
-### 4. Streaming de Status (SSE)
+---
+
+## 📡 Streaming de Status (SSE)
 
 O SDK oferece streaming em tempo real do status dos e-mails via Server-Sent Events:
 
 ```typescript
-// Conectar ao stream de status
-hermes.stream.onEmailStatus((event) => {
-  // event.emailId  — ID do email
-  // event.status   — 'pending' | 'sent' | 'failed' | 'retrying'
-  // event.timestamp — ISO 8601
+// onEmailStatus é async - conecta e mantém a conexão aberta enquanto recebe eventos
+await hermes.stream.onEmailStatus((event) => {
+  // event.emailId   - ID do email
+  // event.status    - 'pending' | 'sent' | 'failed' | 'retrying'
+  // event.timestamp - ISO 8601
   console.log(`Email ${event.emailId}: ${event.status}`);
 });
 
-// Desconectar quando não precisar mais
+// Para desconectar antes que o stream termine:
 hermes.stream.disconnect();
 ```
 
-### 5. Health Check
+> **Nota:** `onEmailStatus` é uma função assíncrona que mantém a conexão aberta e só resolve quando o stream termina (ou é abortado). Chame-a com `await` em um contexto que permita espera longa, ou use-a sem `await` para não bloquear o fluxo principal.
+
+---
+
+## 🏥 Health Check
 
 ```typescript
 const status = await hermes.healthCheck();
-console.log(status.status); // "ok"
-console.log(status.uptime); // uptime em segundos
+// Retorna o objeto JSON da rota GET /api/health da Hermes API
+console.log(status.message); // "Hermes API rodando. UpTime: 42.35s"
 ```
 
-### 6. Tratamento de Erros Tipados
+---
+
+## ⚠️ Tratamento de Erros Tipados
 
 O SDK expõe uma hierarquia de classes de erro para tratamento granular. Todas estendem `HermesError`:
 
@@ -177,7 +215,7 @@ try {
     .send();
 } catch (err) {
   if (err instanceof HermesValidationError) {
-    // Validação local (builder) — a requisição nem foi enviada
+    // Validação local (builder) - a requisição nem foi enviada
     console.error('Campos inválidos:', err.fields);
   } else if (err instanceof HermesRateLimitError) {
     console.warn(`Rate limit atingido. Tente novamente em ${err.retryAfterMs}ms`);
@@ -197,16 +235,18 @@ try {
 
 | Classe | Código | Quando ocorre |
 |---|---|---|
-| `HermesValidationError` | `VALIDATION_ERROR` | Validação no builder (ex: `to` ou `subject` ausente) |
+| `HermesValidationError` | `VALIDATION_ERROR` | Validação local (disponível para uso; o builder atual lança `Error` genérico) |
 | `HermesAuthError` | `AUTH_ERROR` | API retornou 401 ou 403 |
 | `HermesRateLimitError` | `RATE_LIMIT` | API retornou 429 |
 | `HermesTimeoutError` | `TIMEOUT` | Requisição excedeu `timeoutMs` |
 | `HermesNetworkError` | `NETWORK_ERROR` | Falha de DNS, conexão recusada, etc. |
-| `HermesError` | `API_ERROR` / `AUTH_MISSING_KEY` / ... | Erros genéricos da API |
+| `HermesError` | `API_ERROR` / ... | Erros genéricos da API |
 
-> **Retry automático:** O SDK retenta automaticamente em status codes configuráveis (padrão: 408, 429, 500, 502, 503, 504) com backoff exponencial + jitter. Erros com `statusCode` definido que não estão na lista de retryable **não** são retentados. Configure via `retry` em `HermesClientConfig` ou use `retry: false` para desabilitar.
+> **Retry automático:** O SDK retenta automaticamente em status codes configuráveis (padrão: 408, 429, 500, 502, 503, 504) com **backoff exponencial + jitter**. Status codes fora da lista (ex: 401, 403) **nunca** são retentados.
 
-### 7. Helpers para Templates
+---
+
+## 🧰 Helpers para Templates
 
 ```typescript
 import { templateHelpers } from '@ruanlopes1350/hermes-client';
@@ -216,7 +256,7 @@ await hermes.email()
   .subject('Pedido confirmado')
   .useTemplate('order-confirmation', {
     greeting:  templateHelpers.greeting('João'),         // "Boa tarde, João"
-    orderDate: templateHelpers.formatDate(new Date()),   // "20 de maio de 2026"
+    orderDate: templateHelpers.formatDate(new Date()),   // "20 de setembro de 2026"
     total:     templateHelpers.formatCurrency(149.90),   // "R$ 149,90"
   })
   .send();
@@ -225,7 +265,7 @@ await hermes.email()
 Os helpers aceitam parâmetros de localidade:
 
 ```typescript
-templateHelpers.formatDate(new Date(), 'en-US');           // "May 20, 2026"
+templateHelpers.formatDate(new Date(), 'en-US');           // "September 20, 2026"
 templateHelpers.formatCurrency(149.90, 'USD', 'en-US');    // "$149.90"
 ```
 
@@ -233,7 +273,7 @@ templateHelpers.formatCurrency(149.90, 'USD', 'en-US');    // "$149.90"
 
 ## 🔄 Rotação Automática de Chaves (Webhooks)
 
-O Hermes enviará um Webhook assinado com **HMAC-SHA256** sempre que uma API Key estiver prestes a expirar. O payload contém a nova chave, o ID do serviço e o timestamp da rotação. O SDK oferece **middlewares plug-and-play** para os principais frameworks:
+O Hermes envia um Webhook assinado com **HMAC-SHA256** sempre que uma API Key estiver prestes a expirar. O SDK oferece **middlewares plug-and-play** para os principais frameworks:
 
 ### Express.js
 
@@ -257,7 +297,7 @@ Crie `app/api/webhook/hermes/route.ts`:
 
 ```typescript
 import { nextWebhookHandler } from '@ruanlopes1350/hermes-client/next';
-import { hermes } from '@/lib/hermes'; // a instância criada anteriormente
+import { hermes } from '@/lib/hermes'; // instância criada anteriormente
 
 export const POST = nextWebhookHandler(hermes, process.env.HERMES_WEBHOOK_SECRET!);
 ```
@@ -273,7 +313,7 @@ import { fastifyWebhookHandler } from '@ruanlopes1350/hermes-client/fastify';
 
 const app = fastify();
 
-// IMPORTANTE: O plugin fastify-raw-body é obrigatório para validação HMAC
+// IMPORTANTE: fastify-raw-body é obrigatório para validação HMAC
 await app.register(rawBody);
 
 app.post(
@@ -282,9 +322,7 @@ app.post(
 );
 ```
 
-### Uso Manual do Webhook
-
-Para frameworks não suportados, use os utilitários diretamente:
+### Uso Manual (frameworks não suportados)
 
 ```typescript
 import { verifyHermesSignature, parseWebhookPayload } from '@ruanlopes1350/hermes-client';
@@ -302,13 +340,13 @@ if (payload) {
 }
 ```
 
-O cabeçalho de assinatura é enviado como `x-hermes-signature`.
+> O cabeçalho de assinatura é enviado como `x-hermes-signature`.
 
 ---
 
-## 📡 Eventos (Ciclo de Vida)
+## 📣 Eventos (Ciclo de Vida)
 
-O `HermesClient` estende `LiteEventEmitter`, um emissor de eventos leve e 100% compatível com Edge Runtimes:
+O `HermesClient` estende `LiteEventEmitter`, um emissor de eventos leve e compatível com Edge Runtimes:
 
 ```typescript
 hermes.on('keyRotated', (newKey, oldKey) => {
@@ -336,18 +374,19 @@ hermes.off('error', handler);
 
 | Evento | Callback | Quando emitido |
 |---|---|---|
-| `keyRotated` | `(newKey: string, oldKey: string \| null) => void` | Chave foi rotacionada via webhook ou `updateApiKey()` |
+| `keyRotated` | `(newKey: string, oldKey: string \| null) => void` | Chave rotacionada via webhook ou `updateApiKey()` |
 | `error` | `(error: Error) => void` | Qualquer erro no envio, webhook ou stream |
 | `retry` | `(attempt: number, error: Error, delayMs: number) => void` | Uma tentativa falhou e o retry foi agendado |
 
 ---
 
-## 🛠️ Storage Adapters
+## 🗄️ Storage Adapters
 
-Quando a chave muda (via webhook ou manualmente), o SDK atualiza a chave via o Storage Adapter configurado.
+Quando a chave muda (via webhook ou manualmente), o SDK atualiza a chave pelo Storage Adapter configurado.
 
 ### `MemoryAdapter` (padrão)
-Guarda a chave na RAM da instância. Simples e ideal para testes rápidos.
+
+Guarda a chave na RAM da instância. Ideal para testes e ambientes com instância única.
 
 ```typescript
 import { HermesClient, MemoryAdapter } from '@ruanlopes1350/hermes-client';
@@ -358,10 +397,11 @@ const hermes = new HermesClient({
 });
 ```
 
-> **Atenção:** Em ambientes com múltiplas instâncias (load balancers), a `MemoryAdapter` não propaga a nova chave entre processos. Use `EnvAdapter` ou um adapter customizado (ex: `RedisAdapter`).
+> **Atenção:** Em ambientes com múltiplas instâncias (load balancers), a `MemoryAdapter` não propaga a nova chave entre processos. Use `EnvAdapter` ou um adapter customizado.
 
 ### `EnvAdapter`
-Lê e escreve a chave diretamente em um arquivo `.env` físico **e** em `process.env`. Ideal para servidores VPS/Bare Metal. Importado via sub-pacote `/node`:
+
+Lê e escreve a chave em um arquivo `.env` físico **e** em `process.env`. Ideal para servidores VPS/Bare Metal.
 
 ```typescript
 import { HermesClient } from '@ruanlopes1350/hermes-client';
@@ -369,14 +409,13 @@ import { EnvAdapter } from '@ruanlopes1350/hermes-client/node';
 
 const hermes = new HermesClient({
   baseUrl: 'https://seu-hermes-api.com',
-  // Procura a variável HERMES_API_KEY no arquivo .env da raiz do projeto
   storageAdapter: new EnvAdapter('.env', 'HERMES_API_KEY'),
 });
 ```
 
-> O `EnvAdapter` usa `fs` síncrono e `process.env`, sendo exclusivo para ambientes Node.js. Ele também faz fallback para `process.env` caso a aplicação (Next.js, etc.) já tenha carregado as variáveis.
+> O `EnvAdapter` usa `fs` síncrono e é exclusivo para ambientes Node.js. Importado via sub-pacote `/node`.
 
-### Adapter Customizado (ex: Redis — para multi-instância)
+### Adapter Customizado (ex: Redis - multi-instância)
 
 Implemente a interface `StorageAdapter`:
 
@@ -400,42 +439,40 @@ const hermes = new HermesClient({
 });
 ```
 
-> A interface `StorageAdapter` aceita retornos síncronos ou assíncronos (`string | null | Promise<string | null>` e `void | Promise<void>`).
+> A interface `StorageAdapter` aceita retornos síncronos ou assíncronos.
 
 ---
 
 ## ⚙️ Configuração de Retry
 
-O retry é configurável por request e usa **backoff exponencial com jitter (±25%)**:
+O retry usa **backoff exponencial com jitter (±25%)**:
 
 ```typescript
 const hermes = new HermesClient({
   baseUrl: 'https://seu-hermes-api.com',
   initialApiKey: 'hm_...',
   retry: {
-    maxAttempts: 5,                                    // Padrão: 3
-    baseDelayMs: 2000,                                 // Padrão: 1000ms
-    backoffFactor: 2,                                  // Padrão: 2
-    maxDelaysMs: 60000,                                // Padrão: 30000ms
+    maxAttempts: 5,                                       // Padrão: 3
+    baseDelayMs: 2000,                                    // Padrão: 1000ms
+    backoffFactor: 2,                                     // Padrão: 2
+    maxDelaysMs: 60000,                                   // Padrão: 30000ms
     retryableStatusCodes: [408, 429, 500, 502, 503, 504], // Padrão
   },
 });
 
 // Ou desabilitar completamente:
-const hermes2 = new HermesClient({
+const hermes = new HermesClient({
   baseUrl: 'https://seu-hermes-api.com',
   initialApiKey: 'hm_...',
   retry: false,
 });
 ```
 
-Erros com `statusCode` definido que **não** estão na lista `retryableStatusCodes` (ex: 401, 403) **nunca** são retentados.
-
 ---
 
 ## 📦 Build e Distribuição
 
-O SDK é construído com **tsup** e distribuído em formato dual:
+O SDK é construído com **tsup** e distribuído em formato dual (ESM + CJS):
 
 | Formato | Arquivo |
 |---|---|
@@ -450,8 +487,8 @@ Handlers de webhook e utilitários Node-only são exportados como sub-pacotes se
 
 | Import Path | Conteúdo |
 |---|---|
-| `@ruanlopes1350/hermes-client` | Core: `HermesClient`, builders, erros, tipos, helpers, storage (Memory) |
-| `@ruanlopes1350/hermes-client/node` | `EnvAdapter` (requer Node.js — usa `fs`) |
+| `@ruanlopes1350/hermes-client` | Core: `HermesClient`, builders, erros, tipos, helpers, `MemoryAdapter` |
+| `@ruanlopes1350/hermes-client/node` | `EnvAdapter` (requer Node.js - usa `fs`) |
 | `@ruanlopes1350/hermes-client/express` | `expressWebhookHandler` |
 | `@ruanlopes1350/hermes-client/next` | `nextWebhookHandler` |
 | `@ruanlopes1350/hermes-client/fastify` | `fastifyWebhookHandler` |
@@ -464,14 +501,14 @@ Handlers de webhook e utilitários Node-only são exportados como sub-pacotes se
 
 ```typescript
 interface SendEmailPayload {
-  recipient_to: string;        // Destinatário
-  subject: string;             // Assunto
-  body?: string;               // HTML direto (alternativa a template)
-  template_id?: string;        // ID do template MJML no Hermes
-  variables?: Record<string, any>;  // Variáveis para o template
+  recipient_to: string;              // Destinatário
+  subject: string;                   // Assunto
+  body?: string;                     // HTML direto (alternativa a template)
+  template_id?: string;              // ID do template MJML no Hermes
+  variables?: Record<string, any>;   // Variáveis para o template
   priority?: 'high' | 'medium' | 'low';
-  credential_id?: string;     // Credencial SMTP específica
-  scheduled_at?: string;      // Data ISO 8601 para envio agendado
+  credential_id?: string;            // Credencial SMTP específica
+  scheduled_at?: string;             // Data ISO 8601 para envio agendado
 }
 ```
 
@@ -493,12 +530,15 @@ interface HermesResponse<T = any> {
 ```typescript
 interface WebhookPayload {
   serviceId: string;
+  credentialId: string;  // ID da credencial rotacionada
   newApiKey: string;
-  rotatedAt: string;
+  rotatedAt: string;     // ISO 8601
+  expiresAt: string;     // ISO 8601 - nova data de expiração
 }
 ```
 
 ---
 
 ## 📄 Licença
-ISC — Ruan Lopes
+
+ISC - [Ruan Lopes](https://github.com/RuanLopes1350)

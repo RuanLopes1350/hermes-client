@@ -11,14 +11,13 @@ export function fastifyWebhookHandler(client: HermesClient, secret: string) {
 
 			// Fastify com rawBody habilitado (plugin fastify-raw-body necessário)
 			if (!request.rawBody) {
-				return reply.status(500).send({ 
-					error: 'Fastify raw-body plugin is required. Install fastify-raw-body.' 
+				return reply.status(500).send({
+					error: 'Fastify raw-body plugin is required. Install fastify-raw-body.',
 				});
 			}
 
-			const rawBody = typeof request.rawBody === 'string'
-				? request.rawBody
-				: request.rawBody.toString('utf8');
+			const rawBody =
+				typeof request.rawBody === 'string' ? request.rawBody : request.rawBody.toString('utf8');
 
 			const payload = await parseWebhookPayload(rawBody, signature, secret);
 			if (!payload) {

@@ -63,7 +63,7 @@ export class HermesClient extends LiteEventEmitter {
 			`Hermes API Error: ${response.status} ${response.statusText} - ${JSON.stringify(errorData)}`,
 			'API_ERROR',
 			response.status,
-			errorData
+			errorData,
 		);
 	}
 
@@ -75,7 +75,7 @@ export class HermesClient extends LiteEventEmitter {
 		if (!apiKey) {
 			const err = new HermesError(
 				'HermesClient: API Key is missing. Please provide it via StorageAdapter or initialApiKey.',
-				'AUTH_MISSING_KEY'
+				'AUTH_MISSING_KEY',
 			);
 			this.emit('error', err);
 			throw err;
@@ -92,8 +92,11 @@ export class HermesClient extends LiteEventEmitter {
 			const timeoutMs = this.config.timeoutMs ?? 30000;
 			const controller = new AbortController();
 			const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+			const startTime = Date.now();
 
 			try {
+				this.emit('requestStart', 'POST', url);
+
 				const response = await fetch(url, {
 					method: 'POST',
 					headers: {
@@ -103,6 +106,9 @@ export class HermesClient extends LiteEventEmitter {
 					body: JSON.stringify(payload),
 					signal: controller.signal,
 				});
+
+				const duration = Date.now() - startTime;
+				this.emit('requestEnd', 'POST', url, response.status, duration);
 
 				if (!response.ok) {
 					throw await this.parseErrorResponse(response);
@@ -178,19 +184,24 @@ export class HermesClient extends LiteEventEmitter {
 		if (!apiKey) {
 			const err = new HermesError(
 				'HermesClient: API Key is missing. Please provide it via StorageAdapter or initialApiKey.',
-				'AUTH_MISSING_KEY'
+				'AUTH_MISSING_KEY',
 			);
 			this.emit('error', err);
 			throw err;
 		}
 
+		const url = `${this.config.baseUrl}/api/emails/bulk`;
+
 		const fn = async () => {
 			const timeoutMs = this.config.timeoutMs ?? 30000;
 			const controller = new AbortController();
 			const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+			const startTime = Date.now();
 
 			try {
-				const response = await fetch(`${this.config.baseUrl}/api/emails/bulk`, {
+				this.emit('requestStart', 'POST', url);
+
+				const response = await fetch(url, {
 					method: 'POST',
 					headers: {
 						'Content-Type': 'application/json',
@@ -199,6 +210,9 @@ export class HermesClient extends LiteEventEmitter {
 					body: JSON.stringify({ emails }),
 					signal: controller.signal,
 				});
+
+				const duration = Date.now() - startTime;
+				this.emit('requestEnd', 'POST', url, response.status, duration);
 
 				if (!response.ok) {
 					throw await this.parseErrorResponse(response);

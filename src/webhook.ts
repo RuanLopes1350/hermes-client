@@ -20,14 +20,14 @@ export async function verifyHermesSignature(
 		encoder.encode(secret),
 		{ name: 'HMAC', hash: 'SHA-256' },
 		false,
-		['sign']
+		['sign'],
 	);
 
 	const data = typeof rawBody === 'string' ? encoder.encode(rawBody) : rawBody;
 	const signatureBytes = await crypto.subtle.sign('HMAC', key, data as any);
-	
+
 	const computedHex = Array.from(new Uint8Array(signatureBytes))
-		.map(b => b.toString(16).padStart(2, '0'))
+		.map((b) => b.toString(16).padStart(2, '0'))
 		.join('');
 
 	// Comparação timing-safe básica

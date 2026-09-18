@@ -1,5 +1,6 @@
 import { HermesClient } from './client';
 import { SendEmailPayload, EmailPriority, HermesResponse } from './types';
+import { HermesValidationError } from './errors';
 
 export class EmailBuilder {
 	private payload: Partial<SendEmailPayload> = {};
@@ -64,10 +65,17 @@ export class EmailBuilder {
 
 	// Dispara o envio chamando o HermesClient.
 	async send(): Promise<HermesResponse> {
-		if (!this.payload.recipient_to) throw new Error("O campo 'to' é obrigatório.");
-		if (!this.payload.subject) throw new Error("O campo 'subject' é obrigatório.");
+		if (!this.payload.recipient_to) {
+			throw new HermesValidationError("O campo 'to' é obrigatório.", { to: 'missing' });
+		}
+		if (!this.payload.subject) {
+			throw new HermesValidationError("O campo 'subject' é obrigatório.", { subject: 'missing' });
+		}
 		if (!this.payload.body && !this.payload.template_id) {
-			throw new Error("Você deve fornecer um 'body' ou um 'template_id'.");
+			throw new HermesValidationError("Você deve fornecer um 'body' ou um 'template_id'.", {
+				body: 'missing',
+				template_id: 'missing',
+			});
 		}
 
 		return this.client.sendEmail(this.payload as SendEmailPayload);
